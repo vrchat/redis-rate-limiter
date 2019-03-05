@@ -177,3 +177,25 @@ server.get(
   controllerB
 );
 ```
+
+
+## Rate-limiting on exceptions in HTTP handlers
+
+Given an Express handler, return a transformed handler that will rate-limit if the user causes too many exceptions.
+ 
+```js
+var opts = {
+  redis: client,
+  rate: '10/minute',
+  key: ipAndRoute  // as defined above  
+};
+
+var errorMatcher = function(e) { return e instanceOf MyCustomError; };  // if omitted, rate-limits all exceptions
+var errorMessage = "Stop doing that!";  // if omitted, uses generic message
+
+
+server.get(
+    {name: 'routeA', path: '/a'}, 
+    handlerExceptions(opts, myHandler, errorMatcher, errorMessage)
+);
+```
