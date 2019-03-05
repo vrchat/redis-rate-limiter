@@ -3,9 +3,16 @@ var async        = require('async');
 var should       = require('should');
 var redis        = require('redis');
 var express      = require('express');
-var supertest    = require('supertest');
 var reset        = require('./reset');
 var middleware   = require('../lib/middleware');
+var helper       = require('./middleware-helper');
+
+var requests = helper.requests;
+var parallelRequests = helper.parallelRequests;
+var wait = helper.wait;
+var okResponse = helper.okResponse;
+var withStatus = helper.withStatus;
+
 
 describe('Middleware', function() {
 
@@ -113,39 +120,3 @@ describe('Middleware', function() {
   });
 
 });
-
-function requests(server, count, url) {
-  return _.times(count, function() {
-    return function(next) {
-      supertest(server).get(url).end(next);
-    };
-  });
-}
-
-function parallelRequests(server, count, url) {
-  return function(next) {
-    async.parallel(requests(server, count, url), next);
-  };
-}
-
-function wait(millis) {
-  return function(next) {
-    setTimeout(next, 1100);
-  };
-}
-
-function okResponse(req, res, next) {
-  res.writeHead(200);
-  res.end('ok');
-}
-
-function withStatus(data, code) {
-  var pretty = data.map(function(d) {
-    return {
-      url: d.req.path,
-      statusCode: d.res.statusCode,
-      body: d.res.body
-    }
-  });
-  return _.filter(pretty, {statusCode: code});
-}
