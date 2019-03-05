@@ -184,6 +184,9 @@ server.get(
 Given an Express handler, return a transformed handler that will rate-limit if the user causes too many exceptions.
  
 ```js
+var rateLimiter = require('redis-rate-limiter');
+var handlerExceptions = rateLimiter.handlerExceptions;
+
 var opts = {
   redis: client,
   rate: '10/minute',
@@ -192,7 +195,6 @@ var opts = {
 
 var errorMatcher = function(e) { return e instanceOf MyCustomError; };  // if omitted, rate-limits all exceptions
 var errorMessage = "Stop doing that!";  // if omitted, uses generic message
-
 
 server.get(
     {name: 'routeA', path: '/a'}, 
