@@ -58,7 +58,7 @@ describe('Handler Exceptions', function() {
                 rate: maxFails.toString() + '/minute',
                 key: 'ip'
             };
-            var rateLimitedHandler = handlerExceptions(opts, failableHandler);
+            var rateLimitedHandler = handlerExceptions(opts, failableHandler, null, null, null, false);
             server.use(rateLimitedHandler);
             server.use(errorHandler);
             done();
@@ -139,7 +139,7 @@ describe('Handler Exceptions', function() {
                okResponse(req, res, next);
            }
 
-           var rateLimitedHandler = handlerExceptions(opts, failChoiceHandler, errorMatcher);
+           var rateLimitedHandler = handlerExceptions(opts, failChoiceHandler, errorMatcher, null, null, false);
            server.use(rateLimitedHandler);
            server.use(errorHandler);
 
@@ -173,7 +173,6 @@ describe('Handler Exceptions', function() {
 
     });
 
-
     describe('Error message', function() {
         it('Should show a custom error message', function(done) {
             var maxFails = 1;
@@ -190,7 +189,7 @@ describe('Handler Exceptions', function() {
             }
 
             var errorMessage = "Oh noes";
-            var rateLimitedHandler = handlerExceptions(opts, alwaysFailHandler, null, errorMessage);
+            var rateLimitedHandler = handlerExceptions(opts, alwaysFailHandler, null, errorMessage, null, false);
             server.use(rateLimitedHandler);
             server.use(errorHandler);
 
@@ -206,7 +205,42 @@ describe('Handler Exceptions', function() {
             });
 
         })
-    })
+    });
 
+    describe('Log only', function() {
+
+        var logMessages = '';
+        var logger = function (message) { logMessages += message + "\n"; };
+
+        it('Log message should appear without rate limiting', function(done) {
+            var maxFails = 1;
+            var server = express();
+
+            var opts = {
+                redis: client,
+                rate: maxFails.toString() + '/minute',
+                key: 'ip'
+            };
+
+            function alwaysFailHandler(req, res, next) {
+                throw new Error();
+            }
+
+            var rateLimitedHandler = handlerExceptions(opts, alwaysFailHandler, null, null, false, logger);
+            server.use(rateLimitedHandler);
+            server.use(errorHandler);
+
+            var reqs = requests(server, 2, '/test');
+
+            async.series(reqs, function (err, data) {
+                data.should.have.length(2);
+                withStatus(data, 500).should.have.length(2);
+                withStatus(data, 429).should.have.length(0);
+                logMessages.should.containEql('Rate limit triggered');
+                done();
+            });
+
+        })
+    });
 
 });
