@@ -191,13 +191,12 @@ var opts = {
   redis: client,
   rate: '10/minute',
   key: ipAndRoute  // as defined above  
+  errorMatcher: function(e) { return e instanceOf MyCustomError; },  // if omitted, rate-limits all exceptions
+  errorMessage: "Stop doing that!"  // if omitted, uses generic message
 };
 
-var errorMatcher = function(e) { return e instanceOf MyCustomError; };  // if omitted, rate-limits all exceptions
-var errorMessage = "Stop doing that!";  // if omitted, uses generic message
-
 server.get(
-    {name: 'routeA', path: '/a'}, 
-    handlerExceptions(opts, myHandler, errorMatcher, errorMessage)
+  {name: 'routeA', path: '/a'}, 
+  handlerExceptions(opts, myHandler)
 );
 ```

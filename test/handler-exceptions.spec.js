@@ -56,9 +56,10 @@ describe('Handler Exceptions', function() {
             var opts = {
                 redis: client,
                 rate: maxFails.toString() + '/minute',
-                key: 'ip'
+                key: 'ip',
+                logger: false
             };
-            var rateLimitedHandler = handlerExceptions(opts, failableHandler, null, null, null, false);
+            var rateLimitedHandler = handlerExceptions(opts, failableHandler);
             server.use(rateLimitedHandler);
             server.use(errorHandler);
             done();
@@ -116,12 +117,6 @@ describe('Handler Exceptions', function() {
            }
            CustomError.prototype = new Error();
 
-           var opts = {
-               redis: client,
-               rate: maxFails.toString() + '/minute',
-               key: 'ip'
-           };
-
            var errorMatcher = function (error) {
                return error instanceof CustomError;
            };
@@ -139,7 +134,15 @@ describe('Handler Exceptions', function() {
                okResponse(req, res, next);
            }
 
-           var rateLimitedHandler = handlerExceptions(opts, failChoiceHandler, errorMatcher, null, null, false);
+           var opts = {
+               redis: client,
+               rate: maxFails.toString() + '/minute',
+               key: 'ip',
+               errorMatcher: errorMatcher,
+               logger: false
+           };
+
+           var rateLimitedHandler = handlerExceptions(opts, failChoiceHandler);
            server.use(rateLimitedHandler);
            server.use(errorHandler);
 
@@ -174,22 +177,23 @@ describe('Handler Exceptions', function() {
     });
 
     describe('Error message', function() {
-        it('Should show a custom error message', function(done) {
+        it('should show a custom error message', function(done) {
             var maxFails = 1;
             var server = express();
 
             var opts = {
                 redis: client,
                 rate: maxFails.toString() + '/minute',
-                key: 'ip'
+                key: 'ip',
+                errorMessage: "Oh noes",
+                logger: false
             };
 
             function alwaysFailHandler(req, res, next) {
                 throw new Error();
             }
 
-            var errorMessage = "Oh noes";
-            var rateLimitedHandler = handlerExceptions(opts, alwaysFailHandler, null, errorMessage, null, false);
+            var rateLimitedHandler = handlerExceptions(opts, alwaysFailHandler);
             server.use(rateLimitedHandler);
             server.use(errorHandler);
 
@@ -200,7 +204,7 @@ describe('Handler Exceptions', function() {
                 withStatus(data, 500).should.have.length(1);
                 var rateLimitedResponses = withStatus(data, 429);
                 rateLimitedResponses.should.have.length(1);
-                rateLimitedResponses[0].text.should.eql(errorMessage);
+                rateLimitedResponses[0].text.should.eql(opts.errorMessage);
                 done();
             });
 
@@ -212,21 +216,23 @@ describe('Handler Exceptions', function() {
         var logMessages = '';
         var logger = function (message) { logMessages += message + "\n"; };
 
-        it('Log message should appear without rate limiting', function(done) {
+        it('should log without rate limiting', function(done) {
             var maxFails = 1;
             var server = express();
 
             var opts = {
                 redis: client,
                 rate: maxFails.toString() + '/minute',
-                key: 'ip'
+                key: 'ip',
+                shouldRateLimit: false,
+                logger: logger
             };
 
             function alwaysFailHandler(req, res, next) {
                 throw new Error();
             }
 
-            var rateLimitedHandler = handlerExceptions(opts, alwaysFailHandler, null, null, false, logger);
+            var rateLimitedHandler = handlerExceptions(opts, alwaysFailHandler);
             server.use(rateLimitedHandler);
             server.use(errorHandler);
 
